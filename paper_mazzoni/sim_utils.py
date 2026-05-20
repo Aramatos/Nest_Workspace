@@ -1,6 +1,12 @@
 import pandas as pd
 import nest
 import numpy as np
+import os
+import matplotlib
+
+if not os.environ.get("DISPLAY"):
+    matplotlib.use("Agg")
+
 from matplotlib import pyplot as plt
 
 def create_neuron_dicts(data):
@@ -115,7 +121,7 @@ def simulate_single_neuron_mult(neuron_params,syn_params,sim_params,stimulus_par
     
     return ts, Vms, ts_w_2, w_2, ts_spikes, senders 
 
-def plot_single_neuron_simulation(ts, Vms, ts_w_2, w_2,v_lines):
+def plot_single_neuron_simulation(ts, Vms, ts_w_2, w_2, v_lines, save_path=None, show=True):
     [i1,i2]=v_lines
     # Set font parameters
     font = {'family': 'serif',
@@ -151,9 +157,13 @@ def plot_single_neuron_simulation(ts, Vms, ts_w_2, w_2,v_lines):
     axs[1].legend()
     axs[1].grid(True)
 
-    # Save the figure
-    print("Saving figure...")
-    plt.savefig('Single_Neuron_Results/adex_neuron_simulation.png')
+    if save_path:
+        fig.savefig(save_path, bbox_inches='tight', dpi=300)
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
 # Plot the results

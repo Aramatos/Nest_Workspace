@@ -112,6 +112,50 @@ def plot_raster(spike_times_E, clusters_E, spike_times_I, clusters_I, sim_params
     plt.show()
 
 # %%
+
+def build_ssn(sim_params, neuron_params, syn_params, w_E, w_I, k_e, k_i):
+    """Build one sub-network: neurons, recurrent connections, background input, recorder."""
+    neurons_E = nest.Create("iaf_psc_exp", sim_params["n_1"], neuron_params)
+    neurons_I = nest.Create("iaf_psc_exp", sim_params["n_2"], neuron_params)
+
+    # Sub-populations
+    c_E = int(sim_params["d"] * sim_params["n_1"])
+    c_I = int(sim_params["d"] * sim_params["n_2"])
+    sub_pops = []
+    for i in range(sim_params["N_C"]):
+        sp_E = neurons_E[i * c_E : (i + 1) * c_E]
+        sp_I = neurons_I[i * c_I : (i + 1) * c_I]
+        sub_pops.append({"exc": sp_E, "inh": sp_I, "stim_idx": i})
+
+    # Recurrent connections
+    nest.Connect(neurons_E, neurons_E,
+                 {"rule": "fixed_indegree", "indegree": k_e},
+                 {"synapse_model": "static_synapse", "weight": w_E, "delay": syn_params["delay"]})
+    nest.Connect(neurons_E, neurons_I,
+                 {"rule": "fixed_indegree", "indegree": k_e},
+                 {"synapse_model": "static_synapse", "weight": w_E, "delay": syn_params["delay"]})
+    nest.Connect(neurons_I, neurons_E,
+                 {"rule": "fixed_indegree", "indegree": k_i},
+                 {"synapse_model": "static_synapse", "weight": w_I, "delay": syn_params["delay"]})
+    nest.Connect(neurons_I, neurons_I,
+                 {"rule": "fixed_indegree", "indegree": k_i},
+                 {"synapse_model": "static_synapse", "weight": w_I, "delay": syn_params["delay"]})
+
+    # Background Poisson input
+    poisson_bg = nest.Create("poisson_generator", params={"rate": k_e * sim_params["mu_x"]})
+    nest.Connect(poisson_bg, neurons_E, "all_to_all",
+                 {"synapse_model": "static_synapse", "weight": w_E, "delay": syn_params["delay"]})
+    nest.Connect(poisson_bg, neurons_I, "all_to_all",
+                 {"synapse_model": "static_synapse", "weight": w_E, "delay": syn_params["delay"]})
+
+    # Recorder
+    spike_rec = nest.Create("spike_recorder")
+    nest.Connect(neurons_E, spike_rec)
+
+    return {"neurons_E": neurons_E, "neurons_I": neurons_I,
+            "sub_pops": sub_pops, "spike_rec": spike_rec}
+
+
 def sim(sim_params, neuron_params, syn_params):
 
     # ── Clean slate ──────────────────────────────────────────────────
@@ -131,7 +175,7 @@ def sim(sim_params, neuron_params, syn_params):
     rng = np.random.default_rng(42)
     active_channels = rng.integers(0,sim_params["N_C"],size=n_stim_steps)
 
-    lam = 0.15
+    lam = 0.05
     nu_stim = k_e * lam * sim_params["mu_x"]
     
     print(f"Stimulus: {n_stim_steps} steps, rate boost = {nu_stim:.1f} spks/s")

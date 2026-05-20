@@ -1,5 +1,6 @@
 
 from sim_utils import *
+import os
 
 def sim(neuron_params,sim_params,stimulus_params):
     nest.ResetKernel()
@@ -86,11 +87,18 @@ stimulus_params={
 
 # Simulate the neuron
 ts, Vms, ts_w_2, w_2, spikes ,senders= sim(adex_params_TC, sim_params,stimulus_params)
-plot_single_neuron_simulation(ts, Vms, ts_w_2, w_2,current_params["amplitude_times"])
+show_plot = bool(os.environ.get("DISPLAY"))
 
+plot_single_neuron_simulation(
+    ts,
+    Vms,
+    ts_w_2,
+    w_2,
+    current_params["amplitude_times"],
+    save_path="one_neuron_simulation.png",
+    show=show_plot,
+)
 
-if __name__ == "__main__":
-    SWEEP_KEY=True
-    if SWEEP_KEY:
-        from sim_utils import parameter_sweep_single_neuron
-        parameter_sweep_single_neuron(adex_params_TC, sim_params, stimulus_params, 'b', [0, 20, 40, 60, 80, 100])
+if not show_plot:
+    print("Headless mode: plot saved to one_neuron_simulation.png")
+
